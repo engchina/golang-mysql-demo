@@ -1,10 +1,12 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"time"
 )
 
 type MySQLClientEngine struct {
@@ -14,6 +16,7 @@ type MySQLClientEngine struct {
 var (
 	GormEngine   *gorm.DB
 	errNewEngine error
+	SqlDB        *sql.DB
 	MySQLClient  MySQLClientEngine
 )
 
@@ -34,25 +37,27 @@ func InitGormEngine() {
 		panic(fmt.Errorf("error in init new engine %w", errNewEngine))
 	}
 
-	//sqlDB, errSqlDB := GormEngine.DB()
-	//if errSqlDB != nil {
-	//	panic(fmt.Errorf("error in init sql db %w", errSqlDB))
-	//}
+	SqlDB, errSqlDB := GormEngine.DB()
+	if errSqlDB != nil {
+		panic(fmt.Errorf("error in init sql db %w", errSqlDB))
+	}
+
 	//defer func(SqlDB *sql.DB) {
 	//	err := SqlDB.Close()
 	//	if err != nil {
 	//		panic(fmt.Errorf("error in close sql db %w", errSqlDB))
 	//	}
-	//}(sqlDB)
+	//}(SqlDB)
 
-	//errPing := sqlDB.Ping()
-	//if errPing != nil {
-	//	panic(fmt.Errorf("error on ping db: %w", errPing))
-	//}
+	errPing := SqlDB.Ping()
+	if errPing != nil {
+		panic(fmt.Errorf("error on ping db: %w", errPing))
+	}
 
-	//SqlDB.SetMaxOpenConns(5)
-	//SqlDB.SetMaxIdleConns(2)
-	//SqlDB.SetConnMaxLifetime(10 * time.Minute)
+	SqlDB.SetMaxOpenConns(50)
+	SqlDB.SetMaxIdleConns(20)
+	SqlDB.SetConnMaxLifetime(time.Hour)
+	SqlDB.SetConnMaxIdleTime(30 * time.Minute)
 
 	// create table
 	//errCreateTable := GormEngine.AutoMigrate(&models.MyUser{})
