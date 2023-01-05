@@ -1,20 +1,17 @@
 # golang-oracle-demo
 
-### Update database date format
+### Start MySQL 8.0
 ```shell
-sqlplus / as sysdba
+mkdir /u01/data/mysql8; chmod 777 /u01/data/mysql8
+docker run -d --name mysql8.0 --restart=always -v /u01/data/mysql8:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=oracle -e MYSQL_DATABASE=oracle -e MYSQL_USER=oracle -e MYSQL_PASSWORD=oracle -p 3308:3306 m
+ysql:8.0.31
 
-SQL> alter system set nls_date_format='YYYY-MM-DD HH24:MI:SS' scope=spfile;
-SQL> alter system set nls_time_format='HH24:MI:SS' scope=spfile;
-SQL> alter system set nls_timestamp_format='YYYY-MM-DD HH24:MI:SS.FF' scope=spfile;
-
-SQL> shutdown immediate;
-SQL> startup;
+docker exec -it mysql8.0 mysql -uroot -poracle -e "alter user 'oracle'@'%' identified with mysql_native_password by 'oracle';"
 ```
 
 ### Usage
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 ### Reference:
 - https://getbootstrap.com/docs/5.2/getting-started/introduction/

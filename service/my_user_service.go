@@ -1,15 +1,15 @@
 package service
 
 import (
-	"github.com/engchina/golang-oracle-demo/models"
+	"github.com/engchina/golang-mysql-demo/models"
+	"gorm.io/gorm"
 	"time"
-	"xorm.io/xorm"
 )
 
 // GetMyUserList Get MyUser List
-func GetMyUserList(session *xorm.Session) (interface{}, error) {
+func GetMyUserList(tx *gorm.DB) (interface{}, error) {
 	var allData []*models.MyUser
-	allData, err := models.GetMyUserList(session)
+	allData, err := models.GetMyUserList(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -17,20 +17,20 @@ func GetMyUserList(session *xorm.Session) (interface{}, error) {
 }
 
 // InsertOrUpdate Insert or Update
-func InsertOrUpdate(session *xorm.Session, in interface{}) (interface{}, error) {
+func InsertOrUpdate(tx *gorm.DB, in interface{}) (interface{}, error) {
 	myUser := in.(*models.MyUser)
 	var myUserModel *models.MyUser
-	myUserModel, has, err := models.GetMyUserInTxn(session, myUser.UserId)
+	myUserModel, has, err := models.GetMyUserInTxn(tx, myUser.UserId)
 	if err != nil {
 		return nil, err
 	}
 
 	var affected int64
 	if !has {
-		affected, err = myUser.InsertMyUserInTxn(session)
+		affected, err = myUser.InsertMyUserInTxn(tx)
 	} else {
 		myUserModel.Name = myUser.Name
-		affected, err = myUserModel.UpdateMyUserInTxn(session)
+		affected, err = myUserModel.UpdateMyUserInTxn(tx)
 	}
 
 	if err != nil {
@@ -40,17 +40,17 @@ func InsertOrUpdate(session *xorm.Session, in interface{}) (interface{}, error) 
 }
 
 // UpdateWithOptimisticLock Optimistic Lock
-func UpdateWithOptimisticLock(session *xorm.Session, in interface{}) (interface{}, error) {
+func UpdateWithOptimisticLock(tx *gorm.DB, in interface{}) (interface{}, error) {
 	myUser := in.(*models.MyUser)
 	var myUserModel *models.MyUser
-	myUserModel, _, err := models.GetMyUserInTxn(session, myUser.UserId)
+	myUserModel, _, err := models.GetMyUserInTxn(tx, myUser.UserId)
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(5 * time.Second)
 
 	myUserModel.Name = myUser.Name
-	affected, err := myUserModel.UpdateMyUserInTxn(session)
+	affected, err := myUserModel.UpdateMyUserInTxn(tx)
 	if err != nil {
 		return -1, err
 	}
@@ -58,19 +58,19 @@ func UpdateWithOptimisticLock(session *xorm.Session, in interface{}) (interface{
 }
 
 // UpdateWithPessimisticLock Pessimistic Lock
-func UpdateWithPessimisticLock(session *xorm.Session, in interface{}) (interface{}, error) {
+func UpdateWithPessimisticLock(tx *gorm.DB, in interface{}) (interface{}, error) {
 	myUser := in.(*models.MyUser)
 	var myUserModel *models.MyUser
-	myUserModel, _, err := models.GetMyUserForUpdateInTxn(session, myUser.UserId)
+	myUserModel, _, err := models.GetMyUserForUpdateInTxn(tx, myUser.UserId)
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(5 * time.Second)
 
 	myUserModel.Name = myUser.Name
-	affected, err := myUserModel.UpdateMyUserInTxn(session)
+	affected, err := myUserModel.UpdateMyUserInTxn(tx)
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
 	return affected, nil
 }

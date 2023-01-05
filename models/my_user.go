@@ -2,51 +2,84 @@ package models
 
 import (
 	_ "github.com/godror/godror"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"gorm.io/plugin/optimisticlock"
 	"time"
-	"xorm.io/xorm"
 )
 
 const (
-	MyUserTableName = "MY_USER"
+	MyUserTableName = "my_user"
 )
 
 type MyUser struct {
-	UserId     string    `json:"userId"  xorm:"varchar(200) pk 'USER_ID'"   form:"userId"`
-	Name       string    `json:"name"    xorm:"varchar(200) notnull 'NAME'" form:"name"`
-	NumOfTried int64     `json:"version" xorm:"version 'NUM_OF_TRIED'"`
-	Created    time.Time `json:"created" xorm:"created 'CREATED'"`
-	Updated    time.Time `json:"updated" xorm:"updated 'UPDATED'"`
-	Deleted    time.Time `json:"deleted" xorm:"deleted 'DELETED'"`
+	UserId     string                 `json:"userId"  gorm:"type:varchar(200);primaryKey"   form:"userId"`
+	Name       string                 `json:"name"    gorm:"type:varchar(200);not null"     form:"name"`
+	NumOfTried optimisticlock.Version `json:"version" gorm:"index"`
+	Created    time.Time              `json:"created" gorm:"autoCreateTime"`
+	Updated    time.Time              `json:"updated" gorm:"autoUpdateTime"`
+	Deleted    gorm.DeletedAt         `json:"deleted" gorm:"index"`
 }
 
 func (*MyUser) TableName() string {
 	return MyUserTableName
 }
 
-func GetMyUserList(session *xorm.Session) ([]*MyUser, error) {
+func GetMyUserList(tx *gorm.DB) ([]*MyUser, error) {
 	allData := make([]*MyUser, 0)
-	err := session.Table(MyUserTableName).OrderBy("user_id").Find(&allData)
-	return allData, err
+	find := tx.Table(MyUserTableName).Order("user_id").Find(&allData)
+	if find.Error != nil {
+		return nil, find.Error
+	}
+	return allData, nil
 }
 
-func GetMyUserInTxn(session *xorm.Session, userId string) (*MyUser, bool, error) {
+func GetMyUserInTxn(tx *gorm.DB, userId string) (*MyUser, bool, error) {
+	var has = false
 	myUser := new(MyUser)
-	has, err := session.Table(MyUserTableName).ID(userId).Get(myUser)
-	return myUser, has, err
+	first := tx.Table(MyUserTableName).First(myUser, userId)
+	if first.Error != nil {
+		if first.Error.Error() == "record not found" {
+			return nil, false, nil
+		} else {
+			return nil, false, first.Error
+		}
+	}
+	if first.RowsAffected == 1 {
+		has = true
+	}
+	return myUser, has, nil
 }
 
-func GetMyUserForUpdateInTxn(session *xorm.Session, userId string) (*MyUser, bool, error) {
+func GetMyUserForUpdateInTxn(tx *gorm.DB, userId string) (*MyUser, bool, error) {
+	var has = false
 	myUser := new(MyUser)
-	has, err := session.ForUpdate().Table(MyUserTableName).ID(userId).Get(myUser)
-	return myUser, has, err
+	first := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Table(MyUserTableName).First(myUser, userId)
+	if first.Error != nil {
+		if first.Error.Error() == "record not found" {
+			return nil, false, nil
+		} else {
+			return nil, false, first.Error
+		}
+	}
+	if first.RowsAffected == 1 {
+		has = true
+	}
+	return myUser, has, nil
 }
 
-func (myUser *MyUser) InsertMyUserInTxn(session *xorm.Session) (int64, error) {
-	count, err := session.Table(MyUserTableName).Insert(myUser)
-	return count, err
+func (myUser *MyUser) InsertMyUserInTxn(tx *gorm.DB) (int64, error) {
+	create := tx.Table(MyUserTableName).Create(myUser)
+	if create.Error != nil {
+		return -1, create.Error
+	}
+	return create.RowsAffected, nil
 }
 
-func (myUser *MyUser) UpdateMyUserInTxn(session *xorm.Session) (int64, error) {
-	count, err := session.Table(MyUserTableName).ID(myUser.UserId).Update(myUser)
-	return count, err
+func (myUser *MyUser) UpdateMyUserInTxn(tx *gorm.DB) (int64, error) {
+	updates := tx.Table(MyUserTableName).Where("user_id = ?", myUser.UserId).Updates(myUser)
+	if updates.Error != nil {
+		return -1, updates.Error
+	}
+	return updates.RowsAffected, nil
 }
