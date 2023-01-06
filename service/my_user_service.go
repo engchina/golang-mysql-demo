@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/engchina/golang-mysql-demo/models"
 	"gorm.io/gorm"
+	"log"
 	"time"
 )
 
@@ -11,6 +12,7 @@ func GetMyUserList(tx *gorm.DB) (interface{}, error) {
 	var allData []*models.MyUser
 	allData, err := models.GetMyUserList(tx)
 	if err != nil {
+		log.Println("select err", err)
 		return nil, err
 	}
 	return allData, nil
@@ -22,6 +24,7 @@ func InsertOrUpdate(tx *gorm.DB, in interface{}) (interface{}, error) {
 	var myUserModel *models.MyUser
 	myUserModel, has, err := models.GetMyUserInTxn(tx, myUser.UserId)
 	if err != nil {
+		log.Println("select err", err)
 		return nil, err
 	}
 
@@ -34,6 +37,7 @@ func InsertOrUpdate(tx *gorm.DB, in interface{}) (interface{}, error) {
 	}
 
 	if err != nil {
+		log.Println("insert or update err", err)
 		return -1, err
 	}
 	return affected, nil
@@ -45,6 +49,7 @@ func UpdateWithOptimisticLock(tx *gorm.DB, in interface{}) (interface{}, error) 
 	var myUserModel *models.MyUser
 	myUserModel, _, err := models.GetMyUserInTxn(tx, myUser.UserId)
 	if err != nil {
+		log.Println("select err", err)
 		return nil, err
 	}
 	time.Sleep(5 * time.Second)
@@ -52,6 +57,7 @@ func UpdateWithOptimisticLock(tx *gorm.DB, in interface{}) (interface{}, error) 
 	myUserModel.Name = myUser.Name
 	affected, err := myUserModel.UpdateMyUserInTxn(tx)
 	if err != nil {
+		log.Println("update err", err)
 		return -1, err
 	}
 	return affected, nil
@@ -63,6 +69,7 @@ func UpdateWithPessimisticLock(tx *gorm.DB, in interface{}) (interface{}, error)
 	var myUserModel *models.MyUser
 	myUserModel, _, err := models.GetMyUserForUpdateInTxn(tx, myUser.UserId)
 	if err != nil {
+		log.Println("select err", err)
 		return nil, err
 	}
 	time.Sleep(5 * time.Second)
@@ -70,6 +77,7 @@ func UpdateWithPessimisticLock(tx *gorm.DB, in interface{}) (interface{}, error)
 	myUserModel.Name = myUser.Name
 	affected, err := myUserModel.UpdateMyUserInTxn(tx)
 	if err != nil {
+		log.Println("update err", err)
 		return -1, err
 	}
 	return affected, nil

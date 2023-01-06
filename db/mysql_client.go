@@ -2,10 +2,11 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"log"
 	"time"
 )
 
@@ -26,32 +27,22 @@ func InitConfig() {
 	viper.SetConfigType("yaml")
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("error in read config file %w", err))
+		log.Fatalln("error in read config file", err)
 	}
 }
 
 func InitGormEngine() {
 	dataSourceName := viper.GetString("mysql.dataSourceName")
-	GormEngine, errNewEngine = gorm.Open(mysql.Open(dataSourceName), &gorm.Config{})
+	GormEngine, errNewEngine = gorm.Open(mysql.Open(dataSourceName), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if errNewEngine != nil {
-		panic(fmt.Errorf("error in init new engine %w", errNewEngine))
+		log.Fatalln("error in init database connection", errNewEngine)
 	}
 
 	SqlDB, errSqlDB := GormEngine.DB()
 	if errSqlDB != nil {
-		panic(fmt.Errorf("error in init sql db %w", errSqlDB))
-	}
-
-	//defer func(SqlDB *sql.DB) {
-	//	err := SqlDB.Close()
-	//	if err != nil {
-	//		panic(fmt.Errorf("error in close sql db %w", errSqlDB))
-	//	}
-	//}(SqlDB)
-
-	errPing := SqlDB.Ping()
-	if errPing != nil {
-		panic(fmt.Errorf("error on ping db: %w", errPing))
+		log.Fatalln("error in init sql db", errSqlDB)
 	}
 
 	SqlDB.SetMaxOpenConns(50)
@@ -59,10 +50,10 @@ func InitGormEngine() {
 	SqlDB.SetConnMaxLifetime(time.Hour)
 	SqlDB.SetConnMaxIdleTime(30 * time.Minute)
 
-	// create table
+	//create table
 	//errCreateTable := GormEngine.AutoMigrate(&models.MyUser{})
 	//if errCreateTable != nil {
-	//	panic(fmt.Errorf("error in create table %w", errCreateTable))
+	//	log.Fatalln("error in create table", errCreateTable)
 	//}
 }
 
@@ -78,9 +69,15 @@ func init() {
 
 func (engine *MySQLClientEngine) ReadWriteTransaction(f func(tx *gorm.DB, in interface{}) (interface{}, error), in interface{}) (interface{}, error) {
 	tx := engine.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 	result, err := f(tx, in)
 	if err != nil {
-		return result, err
+		tx.Rollback()
+		return nil, err
 	}
 	tx.Commit()
 	return result, nil
@@ -88,9 +85,15 @@ func (engine *MySQLClientEngine) ReadWriteTransaction(f func(tx *gorm.DB, in int
 
 func (engine *MySQLClientEngine) ReadOnlyTransaction(f func(tx *gorm.DB) (interface{}, error)) (interface{}, error) {
 	tx := engine.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 	result, err := f(tx)
 	if err != nil {
-		return result, err
+		tx.Rollback()
+		return nil, err
 	}
 	tx.Rollback()
 	return result, nil
