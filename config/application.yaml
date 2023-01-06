@@ -1,3 +1,3 @@
 mysql:
   # for connect general Database
-  dataSourceName: "oracle:oracle@tcp(192.168.31.45:3308)/oracle?charset=utf8mb4&parseTime=True&loc=Asia%2FTokyo&timeout=30s&readTimeout=30s&writeTimeout=60s"
+  dataSourceName: "oracle:oracle@tcp(192.168.31.45:3308)/oracle?charset=utf8mb4&parseTime=True&loc=Asia%2FTokyo&timeout=30s&readTimeout=60s&writeTimeout=60s"
