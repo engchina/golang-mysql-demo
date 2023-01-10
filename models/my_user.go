@@ -71,7 +71,7 @@ func GetMyUserForUpdateInTxn(tx *gorm.DB, userId string) (*MyUser, bool, error) 
 func (myUser *MyUser) InsertMyUserInTxn(tx *gorm.DB) (int64, error) {
 	create := tx.Table(MyUserTableName).Create(myUser)
 	if create.Error != nil {
-		return -1, create.Error
+		return 0, create.Error
 	}
 	return create.RowsAffected, nil
 }
@@ -79,7 +79,7 @@ func (myUser *MyUser) InsertMyUserInTxn(tx *gorm.DB) (int64, error) {
 func (myUser *MyUser) UpdateMyUserInTxn(tx *gorm.DB) (int64, error) {
 	updates := tx.Table(MyUserTableName).Where("user_id = ?", myUser.UserId).Updates(myUser)
 	if updates.Error != nil {
-		return -1, updates.Error
+		return 0, updates.Error
 	}
 	return updates.RowsAffected, nil
 }
