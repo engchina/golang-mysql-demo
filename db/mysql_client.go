@@ -34,7 +34,8 @@ func InitConfig() {
 func InitGormEngine() {
 	dataSourceName := viper.GetString("mysql.dataSourceName")
 	GormEngine, errNewEngine = gorm.Open(mysql.Open(dataSourceName), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		QueryFields: true,
+		Logger:      logger.Default.LogMode(logger.Info),
 	})
 	if errNewEngine != nil {
 		log.Fatalln("error in init database connection", errNewEngine)
