@@ -1,7 +1,6 @@
 package models
 
 import (
-	_ "github.com/godror/godror"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/plugin/optimisticlock"
